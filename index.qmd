@@ -7,5 +7,180 @@ This is a Quarto website.
 To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
 
 ```{r}
-1 + 1
+library(tidyverse)
+library(usethis)
+library(ggplot2)
+library(gapminder)
+library(plotly)
+library(leaflet)
+library(xts)
+library(dygraphs)
+library(corrplot)
+library(GGally)
+library(lares)
+
+data <- gapminder %>% filter(year=="2007") %>% select(-year)
+
+# Basic ggplot
+p <- data %>%
+  ggplot(aes(x=gdpPercap, y=lifeExp, size = pop, color = continent)) +
+    geom_point(alpha=0.7) 
+p
+```
+
+# Plotly
+
+```{r}
+p <- data %>%
+  mutate(myText=paste("This country is: " , country )) %>%
+  ggplot( aes(x=gdpPercap, y=lifeExp, size = pop, color = continent, text=myText)) +
+    geom_point(alpha=0.7) 
+
+ggplotly(p, tooltip="text")
+```
+
+# Leaflet
+
+```{r}
+# Library
+library(leaflet)
+ 
+# load example data (Fiji Earthquakes) + keep only 100 first lines
+data(quakes) #present in R
+quakes =  head(quakes, 100)
+quakes
+```
+
+```{r}
+# Create a color palette with handmade bins.
+mybins=seq(4, 6.5, by=0.5)
+mypalette = colorBin(palette="YlOrBr", domain=quakes$mag, na.color="transparent", bins=mybins)
+
+# Final Map
+leaflet(quakes) %>% 
+  addTiles()  %>% 
+  setView(lat=-19, lng=180 , zoom=4) %>% #usually helpful to start with average lat and long and then adjust accordingly.
+  addProviderTiles("Esri.WorldImagery") %>%
+  addCircleMarkers(~long, ~lat, 
+    fillColor = ~mypalette(mag), fillOpacity = 0.7, color="white", radius=8, stroke=FALSE
+  ) %>%
+  addLegend(pal=mypalette, values=~mag, opacity=0.9, title = "Magnitude", position = "bottomright" )
+```
+
+# dygraphs
+
+```{r}
+# Load dataset from github
+data <- read.table("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/3_TwoNumOrdered.csv", header=T)
+
+str(data) #time is in character format but have date values
+
+#iconvert to date format,and transofrm data to the xts format as needed by the dygraphs.
+
+data$date <- as.Date(data$date)
+str(data)
+
+# Then you can create the xts format, and thus use dygraph
+don <- xts(x = data$value, order.by = data$date)
+don
+```
+
+```{r}
+# Use the dygraph HTML widget
+dygraph(don) %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)
+```
+
+# heatmap
+
+```{r}
+# The mtcars dataset:
+mtcars
+
+data <- as.matrix(mtcars)
+data
+# Default Heatmap
+heatmap(data)
+```
+
+## normalization
+
+```{r}
+# Use 'scale' to normalize
+heatmap(data, scale="column")
+```
+
+## dendrogram and reordering
+
+```{r}
+# No dendrogram nor reordering for neither column or row
+heatmap(data, Colv = NA, Rowv = NA, scale="column")
+```
+
+## color palette
+
+```{r}
+# 1: native palette from R
+heatmap(data, scale="column", col = cm.colors(256))
+```
+
+# 3D
+
+```{r}
+
+#rename to create levels
+mtcars$am[which(mtcars$am == 0)] <- 'Automatic'
+mtcars$am[which(mtcars$am == 1)] <- 'Manual'
+mtcars$am <- as.factor(mtcars$am)
+
+#Create plot
+plot <- plot_ly(mtcars, x = ~wt, y = ~hp, z = ~qsec, color = ~am, colors = c('#BF382A', '#0C4B8E'))
+plot <- plot %>% add_markers()
+plot <- plot %>% layout(scene = list(xaxis = list(title = 'Weight'),
+                     yaxis = list(title = 'Gross horsepower'),
+                     zaxis = list(title = '1/4 mile time')))
+
+plot
+```
+
+# Correlogram
+
+```{r}
+# Load the data 
+data(mtcars) 
+  
+# Calculate the correlation matrix 
+cor_matrix = cor(mtcars) 
+cor_matrix
+```
+
+```{r}
+# Create the correlogram 
+corrplot(cor_matrix, type = "upper",  
+         method = "square",  
+         addCoef.col = "black",  
+         tl.col = "black", tl.srt = 45)
+```
+
+# GGally
+
+```{r}
+data(flea)
+ggpairs(flea, columns = 2:4, ggplot2::aes(colour=species)) 
+```
+
+# Lares
+
+```{r}
+
+# loading the data 
+data(mtcars) 
+corr <- cor(mtcars, method = "spearman") 
+corrplot(corr, method = "square",  
+         title = "Correlogram of mtcars data set", 
+         tl.col = "blue",  
+         tl.srt = 45) 
 ```
